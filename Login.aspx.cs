@@ -1,53 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Configuration;
-using System.Data;
 using System.Data.SqlClient;
 using System.Linq;
 using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 
-namespace English_Learning1
+namespace English_Learning1.Admin
 {
     public partial class Login : System.Web.UI.Page
     {
-        String s = ConfigurationManager.ConnectionStrings["constr"].ConnectionString;
-        SqlConnection con;
-        SqlDataAdapter da;
-        DataSet ds;
-        SqlCommand cmd;
         protected void Page_Load(object sender, EventArgs e)
         {
-            getcon();
-        }
-        void getcon()
-        {
-            con = new SqlConnection(s);
-            con.Open();
+            if (Session["Username"] != null)
+            {
+                Response.Redirect("Dashboard.aspx");
+            }
         }
 
-        protected void Button1_Click(object sender, EventArgs e)
+        protected void btnLogin_Click(object sender, EventArgs e)
         {
-            getcon();
-            if (TextBox1.Text != null && TextBox2.Text != null)
+            string username = txtUsername.Text.Trim();
+            string password = txtPassword.Text.Trim();
+
+            string connStr = ConfigurationManager.ConnectionStrings["constr"].ConnectionString;
+
+            try
             {
-                cmd = new SqlCommand("SELECT COUNT(*) FROM emp_tbl WHERE Email='" + TextBox1.Text + "' AND Password='" + TextBox2.Text + "'", con);
-                int i = Convert.ToInt32(cmd.ExecuteScalar());
-                if (i > 0)
+                using (SqlConnection con = new SqlConnection(connStr))
                 {
-                    Session["email"] = TextBox1.Text;
-                    Response.Write("<script>alert('Login Successfull');</script>");
-                    Response.Redirect("WebForm1.aspx");
-                }
-                else
-                {
-                    Response.Write("<script>alert('Invalid Email or Password!');</script>");
+                    con.Open(); // Check if this line throws an exception
+                    lblMessage.Text = "Connection opened successfully.";
+
+                    string query = "SELECT COUNT(*) FROM Users WHERE Username=@Username AND Password=@Password";
+                    using (SqlCommand cmd = new SqlCommand(query, con))
+                    {
+                        cmd.Parameters.AddWithValue("@Username", username);
+                        cmd.Parameters.AddWithValue("@Password", password);
+
+                        int count = Convert.ToInt32(cmd.ExecuteScalar());
+                        if (count == 1)
+                        {
+                            Session["Username"] = username;
+                            Response.Redirect("Dashboard.aspx");
+                        }
+                        else
+                        {
+                            lblMessage.Text = "Invalid username or password.";
+                        }
+                    }
                 }
             }
-            else
+            catch (Exception ex)
             {
-                Response.Write("<script>alert('Enter both values please!');</script>");
+                lblMessage.Text = "Error: " + ex.Message;
             }
         }
     }
